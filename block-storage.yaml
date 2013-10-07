@@ -17,8 +17,11 @@ Parameters:
   BlockStorageImage:
     Type: String
     Default: overcloud-blk-storage
-  CinderDSN:
+  CinderPassword:
+    Default: unset
+    Description: The password for the cinder service account, used by cinder-api.
     Type: String
+    NoEcho: true
   KeystoneHost:
     Type: String
   NeutronHost:
@@ -89,9 +92,10 @@ Resources:
       keystone:
         host: {Ref: KeystoneHost}
       cinder:
-        service-password:
-          Ref: AdminPassword
-        db: {Ref: CinderDSN}
+        db: mysql://cinder:unset@localhost/cinder
+          volume_size_mb: '5000'
+          service-password:
+            Ref: CinderPassword
       neutron:
         host: {Ref: NeutronHost}
         ovs_db: {Ref: NeutronDSN}
