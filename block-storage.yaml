@@ -1,0 +1,118 @@
+HeatTemplateFormatVersion: '2012-12-12'
+Description: 'Block Storage'
+Parameters:
+  AdminPassword:
+    Default: unset
+    Description: The password for the keystone admin account, used for monitoring, querying neutron etc.
+    Type: String
+    NoEcho: true
+  KeyName: 
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
+    Type: String
+    Default: default
+  Flavor:
+    Description: Use this flavor
+    Type: String
+    Default: baremetal
+  BlockStorageImage:
+    Type: String
+    Default: overcloud-blk-storage
+  CinderDSN:
+    Type: String
+  KeystoneHost:
+    Type: String
+  NeutronHost:
+    Type: String
+  RabbitHost:
+    Type: String
+  RabbitPassword:
+    Type: String
+    NoEcho: true
+  NovaInterfaces:
+    Type: String
+    Default: eth0
+  NeutronDSN:
+    Type: String
+  NeutronBridgeMappings:
+    Type: String
+  NeutronNetworkVLANRanges:
+    Type: String
+  NeutronNetworkType:
+    Type: String
+  NeutronEnableTunnelling:
+    Type: String
+Resources:
+  ComputeAccessPolicy:
+    Type: OS::Heat::AccessPolicy
+    Properties:
+      AllowedResources: [ BlockStorage0 ]
+  ComputeUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies: [ { Ref: ComputeAccessPolicy } ]
+  ComputeKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName:
+        Ref: ComputeUser
+  BlockStorage0:
+    Type: OS::Nova::Server
+    Properties:
+      image:
+        {Ref: BlockStorageImage}
+      flavor: {Ref: Flavor}
+      key_name: {Ref: KeyName}
+    Metadata:
+      os-collect-config:
+        cfn:
+          access_key_id:
+            Ref: ComputeKey
+          secret_access_key:
+            Fn::GetAtt: [ ComputeKey, SecretAccessKey ]
+          stack_name: {Ref: 'AWS::StackName'}
+          path: BlockStorage0Config.Metadata
+      OpenStack::ImageBuilder::Elements: [ cinder ]
+  BlockStorage0Config:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      InstanceType: '0'
+      ImageId: '0'
+    Metadata:
+      os-collect-config:
+        cfn:
+          access_key_id:
+            Ref: ComputeKey
+          secret_access_key:
+            Fn::GetAtt: [ ComputeKey, SecretAccessKey ]
+          stack_name: {Ref: 'AWS::StackName'}
+          path: BlockStorage0Config.Metadata
+      keystone:
+        host: {Ref: KeystoneHost}
+      cinder:
+        service-password:
+          Ref: AdminPassword
+        db: {Ref: CinderDSN}
+      neutron:
+        host: {Ref: NeutronHost}
+        ovs_db: {Ref: NeutronDSN}
+        ovs:
+          local_ip:
+            Fn::Select:
+              - 0
+              - Fn::Select:
+                - ctlplane
+                - Fn::GetAtt:
+                  - BlockStorage0
+                  - networks
+          tenant_network_type: {Ref: NeutronNetworkType}
+          network_vlan_ranges: {Ref: NeutronNetworkVLANRanges}
+          bridge_mappings: {Ref: NeutronBridgeMappings}
+          enable_tunneling: {Ref: NeutronEnableTunnelling}
+        service-password:
+          Ref: NeutronPassword
+      admin-password: {Ref: AdminPassword}
+      rabbit:
+        host: {Ref: RabbitHost}
+        password: {Ref: RabbitPassword}
+      interfaces:
+        control: {Ref: NovaInterfaces}
