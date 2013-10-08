@@ -24,26 +24,32 @@ Parameters:
     NoEcho: true
   KeystoneHost:
     Type: String
+    Default: 192.0.2.5
   NeutronHost:
     Type: String
+    Default: 192.0.2.5
   RabbitHost:
     Type: String
+    Default: 192.0.2.5
   RabbitPassword:
     Type: String
+    Default: "guest"
     NoEcho: true
   NovaInterfaces:
     Type: String
     Default: eth0
-  NeutronDSN:
-    Type: String
   NeutronBridgeMappings:
     Type: String
+    Default: ""
   NeutronNetworkVLANRanges:
     Type: String
+    Default: ""
   NeutronNetworkType:
     Type: String
+    Default: "gre"
   NeutronEnableTunnelling:
     Type: String
+    Default: "true"
 Resources:
   ComputeAccessPolicy:
     Type: OS::Heat::AccessPolicy
@@ -93,12 +99,12 @@ Resources:
         host: {Ref: KeystoneHost}
       cinder:
         db: mysql://cinder:unset@localhost/cinder
-          volume_size_mb: '5000'
-          service-password:
-            Ref: CinderPassword
+        volume_size_mb: '5000'
+        service-password:
+          Ref: CinderPassword
       neutron:
         host: {Ref: NeutronHost}
-        ovs_db: {Ref: NeutronDSN}
+        ovs_db: mysql://neutron:unset@192.0.2.5
         ovs:
           local_ip:
             Fn::Select:
