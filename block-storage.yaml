@@ -119,7 +119,7 @@ Resources:
           bridge_mappings: {Ref: NeutronBridgeMappings}
           enable_tunneling: {Ref: NeutronEnableTunnelling}
         service-password:
-          Ref: NeutronPassword
+          {Ref: AdminPassword}
       admin-password: {Ref: AdminPassword}
       rabbit:
         host: {Ref: RabbitHost}
