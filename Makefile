@@ -3,7 +3,7 @@ NOTCOMPUTE=nova-api.yaml keystone.yaml heat-allinone.yaml glance.yaml neutron.ya
 notcompute.yaml: $(NOTCOMPUTE)
 	python merge.py --master-role notcompute --slave-roles stateless stateful -- $^ > notcompute.yaml
 
-overcloud.yaml: overcloud-source.yaml nova-compute-instance.yaml
+overcloud.yaml: overcloud-source.yaml nova-compute-instance.yaml block-storage.yaml
 	python merge.py $< > $@.tmp
 	mv $@.tmp $@
 
