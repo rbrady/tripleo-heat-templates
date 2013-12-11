@@ -1,10 +1,23 @@
-NOTCOMPUTE=nova-api.yaml keystone.yaml heat-allinone.yaml glance.yaml neutron.yaml mysql.yaml rabbitmq.yaml
+overcloud.yaml: overcloud-source.yaml nova-compute-instance.yaml swift-source.yaml
+	# $^ won't work here because we want to list nova-compute-instance.yaml as
+	# a prerequisite but don't want to pass it into merge.py
+	python merge.py overcloud-source.yaml swift-source.yaml > $@.tmp
+	mv $@.tmp $@
 
-notcompute.yaml: $(NOTCOMPUTE)
-	python merge.py --master-role notcompute --slave-roles stateless stateful -- $^ > notcompute.yaml
+undercloud-vm.yaml: undercloud-source.yaml undercloud-vm-source.yaml
+	python merge.py $^ > $@.tmp
+	mv $@.tmp $@
 
-overcloud.yaml: overcloud-source.yaml nova-compute-instance.yaml
-	python merge.py $< > $@.tmp
+undercloud-bm.yaml: undercloud-source.yaml undercloud-bm-source.yaml
+	python merge.py $^ > $@.tmp
+	mv $@.tmp $@
+
+undercloud-vm-tuskar.yaml: undercloud-source.yaml undercloud-vm-source.yaml tuskar-source.yaml
+	python merge.py $^ > $@.tmp
+	mv $@.tmp $@
+
+undercloud-vm-ironic.yaml: undercloud-source.yaml undercloud-vm-source.yaml ironic-source.yaml
+	python merge.py $^ > $@.tmp
 	mv $@.tmp $@
 
 test:

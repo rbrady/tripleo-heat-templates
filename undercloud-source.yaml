@@ -10,6 +10,7 @@ Parameters:
     Default: unset
     Description: The keystone auth secret.
     Type: String
+    NoEcho: true
   BaremetalArch:
     Default: i386
     Description: The architecture to use in Nova-BM - i386 or amd64.
@@ -40,24 +41,16 @@ Parameters:
     Description: The password for the neutron service account, used by neutron agents.
     Type: String
     NoEcho: true
-  NeutronNativePXE:
-    Default: ''
-    Type: String
-    Description: Set truthy to enable Neutron native PXE.
   NovaPassword:
     Default: unset
     Description: The password for the nova service account, used by nova-api.
     Type: String
     NoEcho: true
-  PowerUserName:
-    Default: stack
-    Description: What username to ssh to the virtual power host with.
-    Type: String
 Resources:
   AccessPolicy:
     Properties:
       AllowedResources:
-      - notcomputeConfig
+      - undercloudConfig
     Type: OS::Heat::AccessPolicy
   Key:
     Properties:
@@ -69,14 +62,15 @@ Resources:
       Policies:
       - Ref: AccessPolicy
     Type: AWS::IAM::User
-  notcomputeConfig:
+  undercloudConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       ImageId: '0'
       InstanceType: foo
     Metadata:
+      OpenStack::Role: undercloudConfig
       OpenStack::Heat::Stack: {}
-      Openstack::ImageBuilder::Elements: [ boot-stack, heat-cfntools, neutron-network-node ]
+      OpenStack::ImageBuilder::Elements: [ boot-stack, heat-cfntools, neutron-network-node ]
       admin-password:
         Ref: AdminPassword
       admin-token: 
@@ -87,13 +81,14 @@ Resources:
           - Fn::Select:
             - "ctlplane"
             - Fn::GetAtt:
-              - notcompute
+              - undercloud
               - networks
       cinder:
         db: mysql://cinder:unset@localhost/cinder
         volume_size_mb: '5000'
       db-password: unset
       glance:
+        backend: file
         db: mysql://glance:unset@localhost/glance
         host: 127.0.0.1
         service-password:
@@ -105,71 +100,45 @@ Resources:
         admin_user: heat
         auth_encryption_key: unset___________
         db: mysql://heat:unset@localhost/heat
-        heat_watch_server_url:
+        watch_server_url:
           Fn::Join:
             - ''
             - - http://
-              - {"Fn::Select": [ 0, {"Fn::Select": [ "ctlplane", {"Fn::GetAtt": [ notcompute, networks ]} ]}]}
+              - {"Fn::Select": [ 0, {"Fn::Select": [ "ctlplane", {"Fn::GetAtt": [ undercloud, networks ]} ]}]}
               - ":8003"
         metadata_server_url:
           Fn::Join:
             - ''
             - - http://
-              - {"Fn::Select": [ 0, {"Fn::Select": [ "ctlplane", {"Fn::GetAtt": [ notcompute, networks ]} ]}]}
+              - {"Fn::Select": [ 0, {"Fn::Select": [ "ctlplane", {"Fn::GetAtt": [ undercloud, networks ]} ]}]}
               - ":8000"
         waitcondition_server_url:
           Fn::Join:
             - ''
             - - http://
-              - {"Fn::Select": [ 0, {"Fn::Select": [ "ctlplane", {"Fn::GetAtt": [ notcompute, networks ]} ]}]}
+              - {"Fn::Select": [ 0, {"Fn::Select": [ "ctlplane", {"Fn::GetAtt": [ undercloud, networks ]} ]}]}
               - ":8000/v1/waitcondition"
       os-collect-config:
         cfn:
           access_key_id:
             Ref: Key
-          path: notcomputeConfig.Metadata
+          path: undercloudConfig.Metadata
           secret_access_key:
             Fn::GetAtt:
             - Key
             - SecretAccessKey
           stack_name:
             Ref: AWS::StackName
-      interfaces:
-        control: eth2
       keystone:
         db: mysql://keystone:unset@localhost/keystone
         host: 127.0.0.1
-      nova:
-        compute_hostname: undercloud
-        compute_driver: baremetal.driver.BareMetalDriver
-        db: mysql://nova:unset@localhost/nova
-        host: 127.0.0.1
-        metadata-proxy: false
-        tuning:
-          ram_allocation_ratio: 1.0
-          reserved_host_memory_mb: 0
-        baremetal:
-          arch:
-            Ref: BaremetalArch
-          db: mysql://nova:unset@localhost/nova_bm
-          power_manager: nova.virt.baremetal.virtual_power_driver.VirtualPowerManager
-          pxe_deploy_timeout: 2400
-          virtual_power:
-            user:
-              Ref: PowerUserName
-            key: /opt/stack/boot-stack/virtual-power-key
-            ssh_host: 192.168.122.1
-            type: virsh
-        service-password:
-          Ref: NovaPassword
       neutron:
         host: 127.0.0.1
-        native_pxe:
-          Ref: NeutronNativePXE
         ovs_db: mysql://neutron:unset@localhost/ovs_neutron?charset=utf8
         ovs:
           dnsmasq_range: [192.0.2.25, 192.0.2.44]
-          public_interface: eth0
+          public_interface:
+            Ref: NeutronPublicInterface
           physical_bridge: br-ctlplane
           physical_network: ctlplane
           network_vlan_ranges: ctlplane
@@ -181,7 +150,7 @@ Resources:
       rabbit:
         host: 127.0.0.1
         password: guest
-  notcompute:
+  undercloud:
     Type: OS::Nova::Server
     Properties:
       image:
@@ -195,7 +164,7 @@ Resources:
         cfn:
           access_key_id:
             Ref: Key
-          path: notcomputeConfig.Metadata
+          path: undercloudConfig.Metadata
           secret_access_key:
             Fn::GetAtt:
             - Key
