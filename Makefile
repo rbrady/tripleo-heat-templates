@@ -1,7 +1,7 @@
-overcloud.yaml: overcloud-source.yaml nova-compute-instance.yaml swift-source.yaml
+overcloud.yaml: overcloud-source.yaml nova-compute-instance.yaml swift-source.yaml block-storage.yaml
 	# $^ won't work here because we want to list nova-compute-instance.yaml as
 	# a prerequisite but don't want to pass it into merge.py
-	python merge.py overcloud-source.yaml swift-source.yaml > $@.tmp
+	python merge.py overcloud-source.yaml swift-source.yaml block-storage.yaml > $@.tmp
 	mv $@.tmp $@
 
 undercloud-vm.yaml: undercloud-source.yaml undercloud-vm-source.yaml

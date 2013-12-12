@@ -10,13 +10,6 @@ Parameters:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
     Type: String
     Default: default
-  Flavor:
-    Description: Use this flavor
-    Type: String
-    Default: baremetal
-  BlockStorageImage:
-    Type: String
-    Default: overcloud-blk-storage
   CinderPassword:
     Default: unset
     Description: The password for the cinder service account, used by cinder-api.
@@ -24,13 +17,8 @@ Parameters:
     NoEcho: true
   KeystoneHost:
     Type: String
-    Default: 192.0.2.5
-  NeutronHost:
-    Type: String
-    Default: 192.0.2.5
   RabbitHost:
     Type: String
-    Default: 192.0.2.5
   RabbitPassword:
     Type: String
     Default: "guest"
@@ -38,32 +26,21 @@ Parameters:
   NovaInterfaces:
     Type: String
     Default: eth0
+  NeutronHost:
+    Type: String
+  NeutronDSN:
+    Type: String
   NeutronBridgeMappings:
     Type: String
-    Default: ""
   NeutronNetworkVLANRanges:
     Type: String
-    Default: ""
   NeutronNetworkType:
     Type: String
-    Default: "gre"
   NeutronEnableTunnelling:
     Type: String
-    Default: "true"
+  MySQLHost:
+    Type: String
 Resources:
-  ComputeAccessPolicy:
-    Type: OS::Heat::AccessPolicy
-    Properties:
-      AllowedResources: [ BlockStorage0 ]
-  ComputeUser:
-    Type: AWS::IAM::User
-    Properties:
-      Policies: [ { Ref: ComputeAccessPolicy } ]
-  ComputeKey:
-    Type: AWS::IAM::AccessKey
-    Properties:
-      UserName:
-        Ref: ComputeUser
   BlockStorage0:
     Type: OS::Nova::Server
     Properties:
@@ -75,9 +52,9 @@ Resources:
       os-collect-config:
         cfn:
           access_key_id:
-            Ref: ComputeKey
+            Ref: BlockStorageKey
           secret_access_key:
-            Fn::GetAtt: [ ComputeKey, SecretAccessKey ]
+            Fn::GetAtt: [ BlockStorageKey, SecretAccessKey ]
           stack_name: {Ref: 'AWS::StackName'}
           path: BlockStorage0Config.Metadata
       OpenStack::ImageBuilder::Elements: [ cinder ]
@@ -90,21 +67,22 @@ Resources:
       os-collect-config:
         cfn:
           access_key_id:
-            Ref: ComputeKey
+            Ref: BlockStorageKey
           secret_access_key:
-            Fn::GetAtt: [ ComputeKey, SecretAccessKey ]
+            Fn::GetAtt: [ BlockStorageKey, SecretAccessKey ]
           stack_name: {Ref: 'AWS::StackName'}
           path: BlockStorage0Config.Metadata
       keystone:
         host: {Ref: KeystoneHost}
       cinder:
-        db: mysql://cinder:unset@localhost/cinder
+        db: {"Fn::Join": ['', ['mysql://cinder:unset@', {Ref: MySQLHost}, '/cinder']]}
         volume_size_mb: '5000'
         service-password:
           Ref: CinderPassword
+        volume: 'true'
       neutron:
         host: {Ref: NeutronHost}
-        ovs_db: mysql://neutron:unset@192.0.2.5
+        ovs_db: {Ref: NeutronDSN}
         ovs:
           local_ip:
             Fn::Select:
