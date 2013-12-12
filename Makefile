@@ -16,6 +16,7 @@ undercloud-vm-tuskar.yaml: undercloud-source.yaml undercloud-vm-source.yaml tusk
 	python merge.py $^ > $@.tmp
 	mv $@.tmp $@
 
+
 undercloud-vm-ironic.yaml: undercloud-source.yaml undercloud-vm-source.yaml ironic-source.yaml
 	python merge.py $^ > $@.tmp
 	mv $@.tmp $@
